@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tetris BD - Offline Block Puzzle</title>
+<meta name="description" content="Offline bilingual English/Bangla Tetris: stack falling blocks, clear lines, beat your best score. No account, no network.">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #020617; color: #e2e8f0; min-height: 100vh; }
+  header { display: flex; align-items: center; justify-content: space-between; max-width: 720px; margin: 0 auto; padding: 16px; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: 0.5px; }
+  header h1 span { color: #22d3ee; }
+  #langBtn { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 15px; }
+  .tagline { text-align: center; color: #94a3b8; margin: 0 0 12px; padding: 0 16px; }
+  .layout { display: flex; gap: 16px; justify-content: center; align-items: flex-start; flex-wrap: wrap; padding: 0 12px 12px; }
+  .panel { width: 132px; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin: 0 0 8px; }
+  .panel canvas { display: block; margin: 0 auto 10px; border-radius: 8px; }
+  .stat { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid #1e293b; font-size: 15px; }
+  .stat:first-of-type { border-top: none; }
+  .stat b { color: #fff; }
+  .board-wrap { position: relative; line-height: 0; }
+  #board { border-radius: 12px; border: 1px solid #1e293b; background: #0f172a; max-width: 92vw; height: auto; }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(2, 6, 23, 0.82); border-radius: 12px; text-align: center; padding: 20px; line-height: 1.4; }
+  .overlay.hidden { display: none; }
+  .overlay h2 { margin: 0; font-size: 26px; }
+  .overlay p { margin: 0; color: #cbd5e1; font-size: 15px; }
+  button.primary { background: #22d3ee; color: #082f49; border: none; border-radius: 10px; padding: 12px 26px; font-size: 17px; font-weight: 700; cursor: pointer; }
+  button.ghost { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 10px; padding: 10px 16px; font-size: 15px; cursor: pointer; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .actions { display: flex; gap: 10px; justify-content: center; padding: 0 12px 14px; flex-wrap: wrap; }
+  .pad { display: grid; grid-template-columns: repeat(5, 56px); gap: 8px; justify-content: center; padding-bottom: 14px; }
+  .pad button { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 10px; padding: 12px 0; font-size: 19px; cursor: pointer; touch-action: manipulation; }
+  .help { max-width: 560px; margin: 0 auto; padding: 0 16px 8px; color: #94a3b8; font-size: 14px; line-height: 1.9; }
+  .help h2 { color: #e2e8f0; font-size: 16px; margin: 0 0 4px; }
+  footer { max-width: 560px; margin: 0 auto; padding: 10px 16px 28px; color: #64748b; font-size: 13px; line-height: 1.6; text-align: center; }
+  @media (max-width: 560px) {
+    .panel { width: 46vw; max-width: 170px; }
+    .board-wrap { order: -1; width: 100%; display: flex; justify-content: center; }
+    .pad { grid-template-columns: repeat(5, 1fr); max-width: 340px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>TETRIS <span>BD</span></h1>
+  <button id="langBtn" type="button">&#2437;&#2494;&#2434;&#2482;&#2494;</button>
+</header>
+<p class="tagline" data-i18n="tagline">Stack the blocks. Clear the lines.</p>
+
+<div class="layout">
+  <div class="panel">
+    <h2 data-i18n="hold">Hold</h2>
+    <canvas id="holdCanvas" width="72" height="72"></canvas>
+    <div class="stat"><span data-i18n="score">Score</span><b id="statScore">0</b></div>
+    <div class="stat"><span data-i18n="lines">Lines</span><b id="statLines">0</b></div>
+    <div class="stat"><span data-i18n="level">Level</span><b id="statLevel">1</b></div>
+    <div class="stat"><span data-i18n="best">Best</span><b id="statBest">0</b></div>
+  </div>
+
+  <div class="board-wrap">
+    <canvas id="board" width="300" height="600"></canvas>
+    <div class="overlay hidden" id="overlay">
+      <h2 id="overlayTitle">Tetris BD</h2>
+      <p id="overlayMsg"></p>
+      <button class="primary" id="overlayBtn" type="button">Start</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 data-i18n="next">Next</h2>
+    <canvas id="next0" width="72" height="72"></canvas>
+    <canvas id="next1" width="72" height="72"></canvas>
+    <canvas id="next2" width="72" height="72"></canvas>
+  </div>
+</div>
+
+<div class="actions">
+  <button class="ghost" id="pauseBtn" type="button" disabled>Pause</button>
+  <button class="ghost" id="holdBtn" type="button" data-i18n="hold">Hold</button>
+  <button class="ghost" id="restartBtn" type="button" data-i18n="restart">Restart</button>
+</div>
+
+<div class="pad" aria-label="On-screen controls">
+  <button id="btnLeft" type="button" aria-label="Move left">&#8592;</button>
+  <button id="btnRight" type="button" aria-label="Move right">&#8594;</button>
+  <button id="btnDown" type="button" aria-label="Soft drop">&#8595;</button>
+  <button id="btnRotate" type="button" aria-label="Rotate">&#8635;</button>
+  <button id="btnDrop" type="button" aria-label="Hard drop">&#11015;</button>
+</div>
+
+<div class="help">
+  <h2 data-i18n="howTo">How to play</h2>
+  <div data-i18n="ctlMove">&#8592; &#8594; move</div>
+  <div data-i18n="ctlRotate">&#8593; / X rotate</div>
+  <div data-i18n="ctlSoft">&#8595; soft drop</div>
+  <div data-i18n="ctlHard">Space hard drop</div>
+  <div data-i18n="ctlHold">C hold piece</div>
+  <div data-i18n="ctlPause">P pause</div>
+</div>
+
+<footer data-i18n="disclaimer">100% offline - no account, no data leaves your device. Best score is saved only in this browser.</footer>
+
+<script src="js/tetris.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
